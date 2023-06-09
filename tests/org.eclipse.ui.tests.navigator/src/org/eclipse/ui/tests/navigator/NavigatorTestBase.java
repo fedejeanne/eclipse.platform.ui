@@ -16,10 +16,12 @@
 package org.eclipse.ui.tests.navigator;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import org.eclipse.core.resources.IProject;
@@ -31,6 +33,7 @@ import org.eclipse.jface.action.ActionContributionItem;
 import org.eclipse.jface.action.IContributionItem;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.ViewerComparator;
 import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
@@ -40,6 +43,7 @@ import org.eclipse.ui.actions.ActionContext;
 import org.eclipse.ui.internal.navigator.NavigatorFilterService;
 import org.eclipse.ui.navigator.CommonNavigator;
 import org.eclipse.ui.navigator.CommonViewer;
+import org.eclipse.ui.navigator.INavigatorContentDescriptor;
 import org.eclipse.ui.navigator.INavigatorContentService;
 import org.eclipse.ui.navigator.NavigatorActionService;
 import org.eclipse.ui.navigator.resources.ProjectExplorer;
@@ -432,6 +436,30 @@ public class NavigatorTestBase {
 		}
 
 		fail("The label provider was not initialized.");
+	}
+
+	protected void waitForSorterOfClass(String extensionId, Class<? extends ViewerComparator> sorterClass) {
+		INavigatorContentDescriptor contentDescriptor = _viewer.getNavigatorContentService()
+				.getContentDescriptorById(extensionId);
+
+		for (int i = 0; i < 1200; i++) {
+			Map<?, ?> sorters = _viewer.getNavigatorContentService().getSorterService()
+					.findAvailableSorters(contentDescriptor);
+
+			assertFalse(sorters == null);
+			boolean found = sorters.values().stream()//
+					.map(Object::getClass)//
+					.anyMatch(sorterClass::equals);
+
+			if (found) {
+				System.out.println("The sorter of class '" + sorterClass.getCanonicalName() + "' was initialized after "
+						+ (i * 50) + " ms");
+				return;
+			}
+		}
+
+		fail("The sorter of class '" + sorterClass.getCanonicalName() + "' was not initialized " //
+				+ "for the extension with ID '" + extensionId + "'");
 	}
 
 }
