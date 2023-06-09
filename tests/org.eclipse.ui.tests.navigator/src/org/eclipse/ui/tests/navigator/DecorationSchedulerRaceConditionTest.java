@@ -82,8 +82,7 @@ public class DecorationSchedulerRaceConditionTest extends NavigatorTestBase {
 
 	@Override
 	@Before
-	public void setUp() {
-		super.setUp();
+	public void setUpHook() {
 
 		_contentService.bindExtensions(new String[] { COMMON_NAVIGATOR_RESOURCE_EXT }, true);
 		_contentService.getActivationService().activateExtensions(new String[] { COMMON_NAVIGATOR_RESOURCE_EXT }, true);

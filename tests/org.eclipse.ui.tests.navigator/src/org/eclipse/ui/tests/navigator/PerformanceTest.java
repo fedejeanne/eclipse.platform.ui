@@ -36,8 +36,6 @@ import org.eclipse.ui.navigator.ICommonViewerMapper;
 import org.eclipse.ui.navigator.resources.ProjectExplorer;
 import org.eclipse.ui.tests.harness.util.DisplayHelper;
 import org.eclipse.ui.tests.harness.util.EditorTestHelper;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -54,18 +52,6 @@ public class PerformanceTest extends NavigatorTestBase {
 	public PerformanceTest() {
 		_navigatorInstanceId = ProjectExplorer.VIEW_ID;
 		_initTestData = false;
-	}
-
-	@Override
-	@Before
-	public void setUp() {
-		super.setUp();
-	}
-
-	@Override
-	@After
-	public void tearDown() {
-		super.tearDown();
 	}
 
 	protected void createProjects() {

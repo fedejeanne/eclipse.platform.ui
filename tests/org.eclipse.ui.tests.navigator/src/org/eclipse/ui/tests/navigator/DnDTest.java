@@ -32,26 +32,12 @@ import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.tests.harness.util.DisplayHelper;
 import org.eclipse.ui.tests.harness.util.SWTEventHelper;
 import org.eclipse.ui.tests.navigator.extension.TestDragAssistant;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 public class DnDTest extends NavigatorTestBase {
 
 	public DnDTest() {
 		_navigatorInstanceId = TEST_VIEWER;
-	}
-
-	@Override
-	@Before
-	public void setUp() {
-		super.setUp();
-	}
-
-	@Override
-	@After
-	public void tearDown() {
-		super.tearDown();
 	}
 
 	@Test
@@ -109,7 +95,7 @@ public class DnDTest extends NavigatorTestBase {
 			fail("Should not throw an exception");
 		}
 
-		Control end = (Control) editorPart.getAdapter(Control.class);
+		Control end = editorPart.getAdapter(Control.class);
 
 		TreeItem[] items = _viewer.getTree().getItems();
 
@@ -146,7 +132,7 @@ public class DnDTest extends NavigatorTestBase {
 			fail("Should not throw an exception");
 		}
 
-		Control end = (Control) editorPart.getAdapter(Control.class);
+		Control end = editorPart.getAdapter(Control.class);
 
 		TreeItem[] items = _viewer.getTree().getItems();
 

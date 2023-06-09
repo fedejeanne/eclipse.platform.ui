@@ -19,7 +19,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 import org.eclipse.core.resources.IProject;
@@ -30,7 +32,12 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.action.ActionContributionItem;
 import org.eclipse.jface.action.IContributionItem;
 import org.eclipse.jface.action.MenuManager;
+import org.eclipse.jface.viewers.IBaseLabelProvider;
+import org.eclipse.jface.viewers.IContentProvider;
+import org.eclipse.jface.viewers.IElementComparer;
 import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.ViewerComparator;
+import org.eclipse.jface.viewers.ViewerFilter;
 import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
@@ -60,6 +67,103 @@ import org.junit.After;
 import org.junit.Before;
 
 public class NavigatorTestBase {
+
+	private static final class ViewerMemento {
+
+		private CommonViewer viewer;
+		private CommonNavigator commonNavigator;
+		private ViewerComparator comparator;
+		private IElementComparer comparer;
+		private IContentProvider contentProvider;
+		private IBaseLabelProvider labelProvider;
+		private ViewerFilter[] filters;
+
+		public ViewerMemento(CommonViewer viewer) {
+			if (viewer == null)
+				return;
+			this.viewer = viewer;
+			commonNavigator = viewer.getCommonNavigator();
+			comparator = viewer.getComparator();
+			comparer = viewer.getComparer();
+			contentProvider = viewer.getContentProvider();
+			labelProvider = viewer.getLabelProvider();
+			filters = viewer.getFilters();
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + Arrays.hashCode(filters);
+			result = prime * result
+					+ Objects.hash(viewer, commonNavigator, comparator, comparer, contentProvider, labelProvider);
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ViewerMemento other = (ViewerMemento) obj;
+
+			// no short-circuit comparisons, I want to see every difference between both
+			// mementos
+			return compareAndLog("viewer", viewer, other.viewer)//
+//					& compareAndLog("commonNavigator", commonNavigator, other.commonNavigator)//
+					& compareAndLog("comparator", comparator, other.comparator) //
+					& compareAndLog("comparer", comparer, other.comparer) //
+					& compareAndLog("contentProvider", contentProvider, other.contentProvider) //
+					& compareAndLog(filters, other.filters) //
+					& compareAndLog("labelProvider", labelProvider, other.labelProvider)
+			;
+		}
+
+		private boolean compareAndLog(Object[] one, Object[] other) {
+			boolean areEqual = Arrays.equals(one, other);
+			boolean containSameClassesInSameOrder = true;
+
+			if (!areEqual) {
+				System.out.println("[arrays] '" + one + "' != '" + other + "'");
+
+				if (one.length != other.length) {
+					System.out.println("Sizes don't match either. These are the elements of both arrays:");
+
+					System.out.println("one: ");
+					System.out.println(Arrays.toString(one));
+
+					System.out.println("other: ");
+					System.out.println(Arrays.toString(other));
+					return false;
+				}
+
+				// Compare all elements one by one (no short-circuit ANDs). If they are
+				// different, the difference will be logged.
+				System.out.println("Comparing elements one by one");
+				for (int i = 0; i < one.length; i++) {
+					containSameClassesInSameOrder &= compareAndLog(String.valueOf(i), one[i], other[i]);
+				}
+			}
+
+			return areEqual || containSameClassesInSameOrder;
+		}
+
+		private boolean compareAndLog(String description, Object one, Object other) {
+			boolean areEqual = Objects.equals(one, other);
+
+			boolean areSameType = one == null && other == null //
+					|| one != null && other != null && one.getClass().equals(other.getClass());
+
+			if (!areEqual && !areSameType)
+				System.out.println("[" + description + "] '" + one.getClass() + "' != '" + other.getClass() + "'");
+
+			return areEqual || areSameType;
+		}
+
+	}
 
 	public static final String COMMON_NAVIGATOR_RESOURCE_EXT = "org.eclipse.ui.navigator.resourceContent";
 
@@ -170,6 +274,8 @@ public class NavigatorTestBase {
 
 	protected boolean _initTestData = true;
 
+	private static ViewerMemento mementoPreviousTest;
+
 	protected static final boolean DEBUG = false;
 
 	public NavigatorTestBase() {
@@ -181,7 +287,7 @@ public class NavigatorTestBase {
 	}
 
 	@Before
-	public void setUp() {
+	public final void setUp() {
 
 		if (_navigatorInstanceId == null) {
 			throw new RuntimeException("Set the _navigatorInstanceId in the constructor");
@@ -238,6 +344,12 @@ public class NavigatorTestBase {
 
 		((NavigatorFilterService) _contentService.getFilterService()).resetFilterActivationState();
 
+
+		this.setUpHook();
+	}
+
+	protected void setUpHook() {
+		// hook method for subclasses.
 	}
 
 	protected void lookAt() {
@@ -266,7 +378,7 @@ public class NavigatorTestBase {
 	}
 
 	@After
-	public void tearDown() {
+	public final void tearDown() {
 		clearAll();
 		// Hide it, we want a new one each time
 		try {
@@ -274,6 +386,24 @@ public class NavigatorTestBase {
 		} catch (PartInitException e) {
 			fail("Should not throw an exception");
 		}
+
+		tearDownHook();
+
+		checkCleanedUpProperly();
+	}
+
+	private void checkCleanedUpProperly() {
+		ViewerMemento mementoThisTest = new ViewerMemento(_viewer);
+
+		boolean areEqual = mementoPreviousTest == null || mementoPreviousTest.equals(mementoThisTest);
+
+		mementoPreviousTest = mementoThisTest;
+
+		assertTrue("This test did not clean up properly.", areEqual);
+	}
+
+	protected void tearDownHook() {
+		// To be overridden in subclasses
 	}
 
 	protected void clearAll() {

@@ -37,8 +37,7 @@ public class EvaluationCacheTest extends NavigatorTestBase {
 	}
 
 	@Override
-	public void setUp() {
-		super.setUp();
+	public void setUpHook() {
 		INavigatorViewerDescriptor mockViewerDescript = new TestNavigatorViewerDescriptor();
 		INavigatorActivationService mockActivationService = new TestNavigatorActivationService();
 		VisibilityAssistant mockAssistant = new VisibilityAssistant(mockViewerDescript, mockActivationService);

@@ -43,9 +43,7 @@ public class JstPipelineTest extends NavigatorTestBase {
 
 	@Override
 	@Before
-	public void setUp() {
-		super.setUp();
-
+	public void setUpHook() {
 		WebJavaContentProvider.staticInit(_contentService.getContentExtensionById(COMMON_NAVIGATOR_JAVA_EXT)
 				.getContentProvider().getClass().getClassLoader());
 	}
