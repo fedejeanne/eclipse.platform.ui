@@ -115,7 +115,7 @@ public class CSSSelectorFactoryImpl implements SelectorFactory {
 	 */
 	@Override
 	public CharacterDataSelector createCDataSectionSelector(String data)
-			throws CSSException {
+			throws CSSException { // hola
 		throw new CSSException(NOT_IMPLEMENTED_IN_CSS2);
 	}
 
