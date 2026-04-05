@@ -287,6 +287,13 @@ public class ResourceItemLabelTest {
 
 	private StyleRange[] getStyleRanges(String searchString, String fileName) throws Exception {
 		IFile file = project.getFile(fileName);
+		// Delete before creating: a previous call may have left the file behind because
+		// deleting immediately after dialog.close() can fail on Windows (open files
+		// cannot be deleted). By the time we reach this point the prior dialog is
+		// already gone, so the lock is released.
+		if (file.exists()) {
+			file.delete(true, null);
+		}
 		file.create(stream, true, new NullProgressMonitor());
 		project.refreshLocal(IResource.DEPTH_INFINITE, new NullProgressMonitor());
 
@@ -322,7 +329,6 @@ public class ResourceItemLabelTest {
 		Object data = table.getItem(0).getData("org.eclipse.jfacestyled_label_key_0");
 
 		dialog.close();
-		file.delete(true, null);
 		if (data == null || !(data instanceof StyleRange[])) {
 			fail("No StyleRanges found for the TableItem");
 		}
