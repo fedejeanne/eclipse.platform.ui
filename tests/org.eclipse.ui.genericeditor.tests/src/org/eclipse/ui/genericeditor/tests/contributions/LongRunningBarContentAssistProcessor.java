@@ -23,7 +23,7 @@ public class LongRunningBarContentAssistProcessor extends BarContentAssistProces
 	public static final String LONG_RUNNING_BAR_CONTENT_ASSIST_PROPOSAL = "bars are also good for soft drink cocktails.";
 	public static final int TIMEOUT_MSEC = 10_000;
 	private static final AtomicBoolean running = new AtomicBoolean();
-	
+
 	public LongRunningBarContentAssistProcessor() {
 		super(LONG_RUNNING_BAR_CONTENT_ASSIST_PROPOSAL);
 	}
@@ -40,13 +40,13 @@ public class LongRunningBarContentAssistProcessor extends BarContentAssistProces
 		}
 		return super.computeCompletionProposals(viewer, offset);
 	}
-	
+
 	public static void enable() {
 		running.set(true);
 	}
-	
+
 	public static void finish() {
 		running.set(false);
 	}
-	
+
 }

@@ -267,7 +267,7 @@ public class CompletionTest extends AbstratGenericEditorTest {
 		final Set<Shell> beforeShells = Arrays.stream(editor.getSite().getShell().getDisplay().getShells())
 				.filter(Shell::isVisible).collect(Collectors.toSet());
 		sleep(editor.getSite().getShell().getDisplay(), 200);
-		assertTrue(shell.isDisposed(), "Completion proposal shell should be disposed after moving the cusor");
+		assertTrue(shell.isDisposed(), "Completion proposal shell should be disposed after moving the cursor");
 		this.completionShell = findNewShell(beforeShells, editor.getSite().getShell().getDisplay());
 		assertNotNull(completionShell, "Shell is expected to open for completion proposals");
 		final Table newCompletionProposalList = findCompletionSelectionControl(completionShell);
@@ -329,8 +329,8 @@ public class CompletionTest extends AbstratGenericEditorTest {
 
 		@Override
 		public ICompletionProposal[] computeCompletionProposals(ITextViewer viewer, int offset) {
-			called= true;
-			return null;
+			this.called = true;
+			return new ICompletionProposal[0];
 		}
 
 		@Override
@@ -357,6 +357,5 @@ public class CompletionTest extends AbstratGenericEditorTest {
 		public IContextInformationValidator getContextInformationValidator() {
 			return null;
 		}
-
 	}
 }

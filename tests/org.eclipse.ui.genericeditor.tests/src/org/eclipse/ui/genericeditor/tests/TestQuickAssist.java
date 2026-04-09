@@ -114,7 +114,7 @@ public class TestQuickAssist extends AbstratGenericEditorTest {
 
 	/**
 	 * Checks that a mock quick assist proposal comes up
-	 * 
+	 *
 	 * @param completionProposalList the quick assist proposal list
 	 * @param proposals expected proposals
 	 */
