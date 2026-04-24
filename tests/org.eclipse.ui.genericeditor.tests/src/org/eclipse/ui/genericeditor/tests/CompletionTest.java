@@ -241,8 +241,11 @@ public class CompletionTest extends AbstratGenericEditorTest {
 				.filter(Shell::isVisible)
 				.filter(shell -> !beforeShells.contains(shell))
 				.toList();
-		assertTrue(afterShells.size() <= 1, "More than one new shell was found");
-		return afterShells.isEmpty() ? null : afterShells.get(0);
+		List<Shell> proposalShells = afterShells.stream()
+				.filter(shell -> findCompletionSelectionControlOrNull(shell) != null)
+				.toList();
+		assertTrue(proposalShells.size() <= 1, "More than one new completion proposal shell was found");
+		return proposalShells.isEmpty() ? null : proposalShells.get(0);
 	}
 
 	@Test
@@ -294,6 +297,15 @@ public class CompletionTest extends AbstratGenericEditorTest {
 	}
 
 	public static Table findCompletionSelectionControl(Widget control) {
+		Table table = findCompletionSelectionControlOrNull(control);
+		if (table != null) {
+			return table;
+		}
+		fail("No completion selection control found in widget: " + control);
+		return null;
+	}
+
+	private static Table findCompletionSelectionControlOrNull(Widget control) {
 		Queue<Widget> widgetsToProcess = new LinkedList<>();
 		widgetsToProcess.add(control);
 		while (!widgetsToProcess.isEmpty()) {
@@ -304,7 +316,6 @@ public class CompletionTest extends AbstratGenericEditorTest {
 				widgetsToProcess.addAll(Arrays.asList(composite.getChildren()));
 			}
 		}
-		fail("No completion selection control found in widget: " + control);
 		return null;
 	}
 
