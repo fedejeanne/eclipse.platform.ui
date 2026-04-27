@@ -260,13 +260,16 @@ public class ResourceItemLabelTest {
 	@Test
 	public void testBug566858_leadingWhitespace() throws Exception {
 		Position[] pos = new Position[] { new Position(0, 5) };
-		compareStyleRanges(pos, getStyleRanges(" test", " test.txt"), " test.txt", "");
+		compareStyleRanges(pos, getStyleRanges(" test", "leadingWhitespace1/ test.txt"), " test.txt",
+				"/leadingWhitespace1");
 
 		pos = new Position[] { new Position(1, 4) };
-		compareStyleRanges(pos, getStyleRanges("?test", " test.txt"), " test.txt", "");
+		compareStyleRanges(pos, getStyleRanges("?test", "leadingWhitespace2/ test.txt"), " test.txt",
+				"/leadingWhitespace2");
 
 		pos = new Position[] { new Position(5, 4) };
-		compareStyleRanges(pos, getStyleRanges("*.txt", " test.txt"), " test.txt", "");
+		compareStyleRanges(pos, getStyleRanges("*.txt", "leadingWhitespace3/ test.txt"), " test.txt",
+				"/leadingWhitespace3");
 	}
 
 	private void compareStyleRanges(Position[] expected, StyleRange[] actual, String fileName, String fileParentPath) {
@@ -287,6 +290,9 @@ public class ResourceItemLabelTest {
 
 	private StyleRange[] getStyleRanges(String searchString, String fileName) throws Exception {
 		IFile file = project.getFile(fileName);
+		if (file.getParent() instanceof IFolder folder && !folder.exists()) {
+			folder.create(true, true, new NullProgressMonitor());
+		}
 		file.create(stream, true, new NullProgressMonitor());
 		project.refreshLocal(IResource.DEPTH_INFINITE, new NullProgressMonitor());
 
