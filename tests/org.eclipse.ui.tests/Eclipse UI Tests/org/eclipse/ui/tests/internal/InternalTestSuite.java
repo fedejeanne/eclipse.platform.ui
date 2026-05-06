@@ -30,7 +30,6 @@ import org.eclipse.ui.tests.markers.MarkerViewTests;
 import org.eclipse.ui.tests.markers.MarkerViewUtilTest;
 import org.eclipse.ui.tests.markers.ResourceMappingMarkersTest;
 import org.eclipse.ui.tests.markers.ScopeAreaTest;
-
 import org.junit.platform.suite.api.SelectClasses;
 import org.junit.platform.suite.api.Suite;
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2020 IBM Corporation and others.
+ * Copyright (c) 2000, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -3908,8 +3908,19 @@ public class WorkbenchPage implements IWorkbenchPage {
 			PerspectiveDescriptor perspectiveDesc = (PerspectiveDescriptor) getPerspectiveDesc(
 					mperspective.getElementId());
 			if (perspectiveDesc == null) {
-				fixedPerspective = true;
-				perspectiveDesc = fixOrphanPerspective(mperspective);
+				if (mperspective.getContributorURI() != null) {
+					PerspectiveRegistry reg = (PerspectiveRegistry) PlatformUI.getWorkbench().getPerspectiveRegistry();
+					// Registers an E4 perspective that is contributed directly via the application
+					// model (e.g. via a model fragment), without renaming it or marking it as a
+					// local copy. Unlike PerspectiveRegistry#addPerspective(MPerspective),
+					// this method does not add the perspective to the application snippets.
+					reg.createDescriptor(mperspective);
+					perspectiveDesc = (PerspectiveDescriptor) getPerspectiveDesc(mperspective.getElementId());
+					sortedPerspectives.add(perspectiveDesc);
+				} else {
+					fixedPerspective = true;
+					perspectiveDesc = fixOrphanPerspective(mperspective);
+				}
 			}
 			Perspective p = new Perspective(perspectiveDesc, mperspective, this);
 			modelToPerspectiveMapping.put(mperspective, p);
