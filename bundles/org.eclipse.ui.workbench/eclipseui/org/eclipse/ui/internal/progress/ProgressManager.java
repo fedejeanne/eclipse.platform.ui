@@ -1075,22 +1075,28 @@ public class ProgressManager extends ProgressProvider implements IProgressServic
 	@Override
 	public void run(boolean fork, boolean cancelable, IRunnableWithProgress runnable)
 			throws InvocationTargetException, InterruptedException {
+		if (shouldRunInBackground()) {
+			// The "Always run in background" preference must suppress the modal
+			// progress dialog for every fork/cancelable combination, not just the
+			// backward compatible (fork==false || cancelable==false) path below.
+			final ProgressMonitorJobsDialog dialog = new ProgressMonitorJobsDialog(
+					ProgressManagerUtil.getDefaultParent());
+			dialog.setOpenOnRun(false);
+			dialog.run(fork, cancelable, runnable);
+			return;
+		}
+
 		if (!fork || !cancelable) {
 			// Backward compatible code.
 			final ProgressMonitorJobsDialog dialog = new ProgressMonitorJobsDialog(
 					ProgressManagerUtil.getDefaultParent());
-			if (shouldRunInBackground()) {
-				dialog.setOpenOnRun(false);
+			Job showDialogJob = scheduleProgressMonitorJob(dialog);
+			try {
 				dialog.run(fork, cancelable, runnable);
-			} else {
-				Job showDialogJob = scheduleProgressMonitorJob(dialog);
-				try {
-					dialog.run(fork, cancelable, runnable);
-				} finally {
-					// In case the dialog hasn't popped up yet, cancel it so it doesn't pop up after
-					// the operation finishes or unwinds with an exception.
-					showDialogJob.cancel();
-				}
+			} finally {
+				// In case the dialog hasn't popped up yet, cancel it so it doesn't pop up after
+				// the operation finishes or unwinds with an exception.
+				showDialogJob.cancel();
 			}
 			return;
 		}
