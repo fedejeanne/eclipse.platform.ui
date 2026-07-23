@@ -187,20 +187,26 @@ public class KeyDispatcherTest {
 
 		assertFalse(handler.q2);
 
+		// Note: the Shell must be disposed at the end of the test (even if an assertion fails
+		// below), otherwise it stays alive on the shared Display and can affect the active
+		// shell/focus state relied upon by tests that run afterwards.
 		Shell shell = new Shell(display, SWT.NONE);
+		try {
+			Event event = new Event();
+			event.type = SWT.KeyDown;
+			event.keyCode = SWT.CTRL;
+			shell.notifyListeners(SWT.KeyDown, event);
 
-		Event event = new Event();
-		event.type = SWT.KeyDown;
-		event.keyCode = SWT.CTRL;
-		shell.notifyListeners(SWT.KeyDown, event);
+			event = new Event();
+			event.type = SWT.KeyDown;
+			event.stateMask = SWT.CTRL;
+			event.keyCode = 'A';
+			shell.notifyListeners(SWT.KeyDown, event);
 
-		event = new Event();
-		event.type = SWT.KeyDown;
-		event.stateMask = SWT.CTRL;
-		event.keyCode = 'A';
-		shell.notifyListeners(SWT.KeyDown, event);
-
-		assertTrue(handler.q2);
+			assertTrue(handler.q2);
+		} finally {
+			shell.dispose();
+		}
 	}
 
 	/**
@@ -258,36 +264,42 @@ public class KeyDispatcherTest {
 	public void testExecuteMultiStrokeBinding() {
 		assertFalse(twoStrokeHandler.q2);
 
+		// Note: the Shell must be disposed at the end of the test (even if an assertion fails
+		// below), otherwise it stays alive on the shared Display and can affect the active
+		// shell/focus state relied upon by tests that run afterwards.
 		Shell shell = new Shell(display, SWT.NONE);
+		try {
+			Event event = new Event();
+			event.type = SWT.KeyDown;
+			event.keyCode = SWT.CTRL;
+			shell.notifyListeners(SWT.KeyDown, event);
 
-		Event event = new Event();
-		event.type = SWT.KeyDown;
-		event.keyCode = SWT.CTRL;
-		shell.notifyListeners(SWT.KeyDown, event);
+			event = new Event();
+			event.type = SWT.KeyDown;
+			event.stateMask = SWT.CTRL;
+			event.keyCode = '5';
+			shell.notifyListeners(SWT.KeyDown, event);
 
-		event = new Event();
-		event.type = SWT.KeyDown;
-		event.stateMask = SWT.CTRL;
-		event.keyCode = '5';
-		shell.notifyListeners(SWT.KeyDown, event);
+			assertFalse(twoStrokeHandler.q2);
 
-		assertFalse(twoStrokeHandler.q2);
+			event = new Event();
+			event.type = SWT.KeyDown;
+			event.keyCode = SWT.CTRL;
+			shell.notifyListeners(SWT.KeyDown, event);
 
-		event = new Event();
-		event.type = SWT.KeyDown;
-		event.keyCode = SWT.CTRL;
-		shell.notifyListeners(SWT.KeyDown, event);
+			event = new Event();
+			event.type = SWT.KeyDown;
+			event.stateMask = SWT.CTRL;
+			event.keyCode = 'A';
+			shell.notifyListeners(SWT.KeyDown, event);
 
-		event = new Event();
-		event.type = SWT.KeyDown;
-		event.stateMask = SWT.CTRL;
-		event.keyCode = 'A';
-		shell.notifyListeners(SWT.KeyDown, event);
+			processEvents();
 
-		processEvents();
-
-		assertTrue(twoStrokeHandler.q2);
-		assertFalse(handler.q2);
+			assertTrue(twoStrokeHandler.q2);
+			assertFalse(handler.q2);
+		} finally {
+			shell.dispose();
+		}
 	}
 
 	@Test
@@ -338,31 +350,38 @@ public class KeyDispatcherTest {
 		listener = dispatcher.getKeyDownFilter();
 		display.addFilter(SWT.KeyDown, listener);
 		display.addFilter(SWT.Traverse, listener);
+		// Note: the Shell (and the StyledText it hosts) must be disposed at the end of the test
+		// (even if an assertion fails below), otherwise they stay alive on the shared Display and
+		// can affect the active shell/focus state relied upon by tests that run afterwards.
 		Shell shell = new Shell(display, SWT.NONE);
-		shell.setLayout(new FillLayout());
-		StyledText text = new StyledText(shell, SWT.WRAP | SWT.MULTI);
-		shell.setBounds(100, 100, 100, 100);
-		shell.layout();
-		processEvents();
-		assertEquals("", text.getText());
+		try {
+			shell.setLayout(new FillLayout());
+			StyledText text = new StyledText(shell, SWT.WRAP | SWT.MULTI);
+			shell.setBounds(100, 100, 100, 100);
+			shell.layout();
+			processEvents();
+			assertEquals("", text.getText());
 
-		Event event = new Event();
-		event.type = SWT.KeyDown;
-		event.stateMask = SWT.SHIFT;
-		event.keyCode = '(';
-		event.character = '(';
-		text.notifyListeners(SWT.KeyDown, event);
+			Event event = new Event();
+			event.type = SWT.KeyDown;
+			event.stateMask = SWT.SHIFT;
+			event.keyCode = '(';
+			event.character = '(';
+			text.notifyListeners(SWT.KeyDown, event);
 
-		event = new Event();
-		event.type = SWT.KeyUp;
-		event.stateMask = SWT.SHIFT;
-		event.keyCode = '(';
-		event.character = '(';
-		text.notifyListeners(SWT.KeyUp, event);
+			event = new Event();
+			event.type = SWT.KeyUp;
+			event.stateMask = SWT.SHIFT;
+			event.keyCode = '(';
+			event.character = '(';
+			text.notifyListeners(SWT.KeyUp, event);
 
-		processEvents();
+			processEvents();
 
-		assertEquals("(", text.getText());
+			assertEquals("(", text.getText());
+		} finally {
+			shell.dispose();
+		}
 	}
 
 	private void processEvents() {
