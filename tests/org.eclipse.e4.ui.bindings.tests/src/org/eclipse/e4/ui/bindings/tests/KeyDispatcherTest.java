@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.Category;
@@ -101,6 +102,24 @@ public class KeyDispatcherTest {
 	private Listener listener;
 	private MApplication application;
 
+	/**
+	 * Monotonically increasing source of synthetic {@link Event#time} values.
+	 * <p>
+	 * Real native key events always carry a unique, monotonically increasing timestamp. Since
+	 * {@link KeyBindingDispatcher#executeCommand} now relies on {@code Event.time} to detect and
+	 * suppress a duplicate re-delivery of the very same native event (see
+	 * {@link KeyBindingDispatcher#isDuplicateKeyEvent}), leaving {@code event.time} at its Java
+	 * default of {@code 0} for every synthetic event -- as this test class used to do -- makes
+	 * every executed command look like a duplicate of whatever command last executed with
+	 * {@code time == 0}, regardless of test or binding. Every synthetic event must therefore be
+	 * given its own distinct, non-zero timestamp, just like the real key event stream would.
+	 */
+	private static final AtomicInteger EVENT_TIME_SEQUENCE = new AtomicInteger();
+
+	private static int nextEventTime() {
+		return EVENT_TIME_SEQUENCE.incrementAndGet();
+	}
+
 	private void defineCommands(IEclipseContext context) {
 		ECommandService cs = workbenchContext
 				.get(ECommandService.class);
@@ -175,10 +194,16 @@ public class KeyDispatcherTest {
 
 	@AfterEach
 	public void tearDown() {
-		workbenchContext.dispose();
-		workbenchContext = null;
-		display.removeFilter(SWT.KeyDown, listener);
-		display.removeFilter(SWT.Traverse, listener);
+		try {
+			workbenchContext.dispose();
+			workbenchContext = null;
+		} finally {
+			// Always remove the display filters, even if context disposal throws, otherwise this
+			// test's dispatcher (and its key-binding state) stays permanently registered on the
+			// shared Display and can intercept/consume key events meant for later tests.
+			display.removeFilter(SWT.KeyDown, listener);
+			display.removeFilter(SWT.Traverse, listener);
+		}
 	}
 
 	@Test
@@ -194,11 +219,13 @@ public class KeyDispatcherTest {
 		try {
 			Event event = new Event();
 			event.type = SWT.KeyDown;
+			event.time = nextEventTime();
 			event.keyCode = SWT.CTRL;
 			shell.notifyListeners(SWT.KeyDown, event);
 
 			event = new Event();
 			event.type = SWT.KeyDown;
+			event.time = nextEventTime();
 			event.stateMask = SWT.CTRL;
 			event.keyCode = 'A';
 			shell.notifyListeners(SWT.KeyDown, event);
@@ -251,6 +278,7 @@ public class KeyDispatcherTest {
 
 		Event event = new Event();
 		event.type = SWT.KeyDown;
+		event.time = nextEventTime();
 		event.stateMask = SWT.CTRL;
 		event.keyCode = 'A';
 
@@ -271,11 +299,13 @@ public class KeyDispatcherTest {
 		try {
 			Event event = new Event();
 			event.type = SWT.KeyDown;
+			event.time = nextEventTime();
 			event.keyCode = SWT.CTRL;
 			shell.notifyListeners(SWT.KeyDown, event);
 
 			event = new Event();
 			event.type = SWT.KeyDown;
+			event.time = nextEventTime();
 			event.stateMask = SWT.CTRL;
 			event.keyCode = '5';
 			shell.notifyListeners(SWT.KeyDown, event);
@@ -284,11 +314,13 @@ public class KeyDispatcherTest {
 
 			event = new Event();
 			event.type = SWT.KeyDown;
+			event.time = nextEventTime();
 			event.keyCode = SWT.CTRL;
 			shell.notifyListeners(SWT.KeyDown, event);
 
 			event = new Event();
 			event.type = SWT.KeyDown;
+			event.time = nextEventTime();
 			event.stateMask = SWT.CTRL;
 			event.keyCode = 'A';
 			shell.notifyListeners(SWT.KeyDown, event);
@@ -311,11 +343,13 @@ public class KeyDispatcherTest {
 
 		Event event = new Event();
 		event.type = SWT.KeyDown;
+		event.time = nextEventTime();
 		event.keyCode = SWT.CTRL;
 		shell.notifyListeners(SWT.KeyDown, event);
 
 		event = new Event();
 		event.type = SWT.KeyDown;
+		event.time = nextEventTime();
 		event.stateMask = SWT.CTRL;
 		event.keyCode = '5';
 		shell.notifyListeners(SWT.KeyDown, event);
@@ -326,11 +360,13 @@ public class KeyDispatcherTest {
 
 		event = new Event();
 		event.type = SWT.KeyDown;
+		event.time = nextEventTime();
 		event.keyCode = SWT.CTRL;
 		shell.notifyListeners(SWT.KeyDown, event);
 
 		event = new Event();
 		event.type = SWT.KeyDown;
+		event.time = nextEventTime();
 		event.stateMask = SWT.CTRL;
 		event.keyCode = 'A';
 		shell.notifyListeners(SWT.KeyDown, event);
@@ -364,6 +400,7 @@ public class KeyDispatcherTest {
 
 			Event event = new Event();
 			event.type = SWT.KeyDown;
+			event.time = nextEventTime();
 			event.stateMask = SWT.SHIFT;
 			event.keyCode = '(';
 			event.character = '(';
@@ -371,6 +408,7 @@ public class KeyDispatcherTest {
 
 			event = new Event();
 			event.type = SWT.KeyUp;
+			event.time = nextEventTime();
 			event.stateMask = SWT.SHIFT;
 			event.keyCode = '(';
 			event.character = '(';
