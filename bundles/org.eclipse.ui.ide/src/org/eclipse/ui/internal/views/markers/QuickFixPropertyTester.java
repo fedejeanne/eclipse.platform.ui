@@ -14,7 +14,6 @@
 package org.eclipse.ui.internal.views.markers;
 
 import org.eclipse.core.expressions.PropertyTester;
-import org.eclipse.ui.ide.IDE;
 
 /**
  * QuickFixPropertyTester is the property tester for the quick fix object.
@@ -36,8 +35,9 @@ public class QuickFixPropertyTester extends PropertyTester {
 	public boolean test(Object receiver, String property, Object[] args,
 			Object expectedValue) {
 		if (property.equals(QUICK_FIX)) {
-			return IDE.getMarkerHelpRegistry().hasResolutions(
-					((MarkerEntry) receiver).getMarker());
+			// Unknown state is reported as fixable; the handler checks for real
+			Boolean fixable = MarkerFixabilityCache.getInstance().lookup(((MarkerEntry) receiver).getMarker());
+			return fixable == null || fixable.booleanValue();
 		}
 		return false;
 	}

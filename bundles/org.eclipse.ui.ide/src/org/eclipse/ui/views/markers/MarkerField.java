@@ -38,6 +38,7 @@ import org.eclipse.ui.internal.ide.IDEInternalPreferences;
 import org.eclipse.ui.internal.ide.IDEInternalWorkbenchImages;
 import org.eclipse.ui.internal.ide.IDEWorkbenchPlugin;
 import org.eclipse.ui.internal.util.BundleUtility;
+import org.eclipse.ui.internal.views.markers.MarkerFixabilityCache;
 import org.eclipse.ui.internal.views.markers.MarkerSupportInternalUtilities;
 
 /**
@@ -83,7 +84,7 @@ public abstract class MarkerField {
 								.getIDEImageDescriptor(MarkerSupportInternalUtilities.IMG_MARKERS_HELP_DECORATION_PATH);
 					}
 				}
-				if (IDE.getMarkerHelpRegistry().hasResolutions(marker)) {
+				if (Boolean.TRUE.equals(MarkerFixabilityCache.getInstance().lookup(marker))) {
 					ISharedImages sharedImages = WorkbenchPlugin.getDefault().getSharedImages();
 					if (image == MarkerSupportInternalUtilities.getSeverityImage(IMarker.SEVERITY_WARNING)) {
 						image = sharedImages.getImage(IDEInternalWorkbenchImages.IMG_OBJS_FIXABLE_WARNING);

@@ -27,6 +27,9 @@ public interface IMarkerResolutionGenerator2 extends IMarkerResolutionGenerator 
 
 	/**
 	 * Returns whether there are any resolutions for the given marker.
+	 * <p>
+	 * This method may be called from a background thread.
+	 * </p>
 	 *
 	 * @param marker the marker
 	 * @return <code>true</code> if there are resolutions for the given marker,

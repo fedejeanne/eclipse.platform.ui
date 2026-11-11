@@ -18,6 +18,7 @@ import org.eclipse.ui.tests.largefile.LargeFileLimitsPreferenceHandlerTest;
 import org.eclipse.ui.tests.markers.Bug75909Test;
 import org.eclipse.ui.tests.markers.DeclarativeFilterActivityTest;
 import org.eclipse.ui.tests.markers.DeclarativeFilterDeclarationTest;
+import org.eclipse.ui.tests.markers.MarkerFixabilityTest;
 import org.eclipse.ui.tests.markers.MarkerHelpRegistryReaderTest;
 import org.eclipse.ui.tests.markers.MarkerHelpRegistryTest;
 import org.eclipse.ui.tests.markers.MarkerQueryTest;
@@ -46,6 +47,7 @@ import org.junit.platform.suite.api.Suite;
 	DeclarativeFilterDeclarationTest.class,
 	ResourceMappingMarkersTest.class,
 	MarkerSupportRegistryTests.class,
+	MarkerFixabilityTest.class,
 	MarkerSupportViewTest.class,
 	MarkerSortUtilTest.class,
 	MarkerViewTests.class,

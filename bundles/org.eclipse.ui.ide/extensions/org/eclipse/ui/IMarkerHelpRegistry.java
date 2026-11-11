@@ -44,6 +44,7 @@ public interface IMarkerHelpRegistry {
 	 * means there are resolutions but due to plugin loading
 	 * issues getResolutions may sometimes return an empty array
 	 * after this method returns <code>true</code>.
+	 * This method may be called from a background thread.
 	 *
 	 * @param marker the marker for which to determine if there
 	 * are resolutions

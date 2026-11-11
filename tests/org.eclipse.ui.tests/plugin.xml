@@ -3531,6 +3531,18 @@
             class="org.eclipse.ui.tests.markers.TestResolutionGenerator"
             markerType="org.eclipse.ui.tests.categoryTestMarker"/>
    </extension>
+   <extension
+         id="blockingResolutionMarker"
+         name="Blocking Resolution Marker"
+         point="org.eclipse.core.resources.markers">
+      <super type="org.eclipse.core.resources.problemmarker"/>
+   </extension>
+   <extension
+         point="org.eclipse.ui.ide.markerResolution">
+      <markerResolutionGenerator
+            class="org.eclipse.ui.tests.markers.BlockingResolutionGenerator"
+            markerType="org.eclipse.ui.tests.blockingResolutionMarker"/>
+   </extension>
 
    <!-- Tests for the new help context identifier work. -->
    <extension

@@ -27,6 +27,7 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import org.eclipse.core.commands.operations.IUndoContext;
 import org.eclipse.core.resources.IFile;
@@ -65,6 +66,7 @@ import org.eclipse.jface.viewers.TreeViewerColumn;
 import org.eclipse.jface.window.Window;
 import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.SWTException;
 import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DragSourceAdapter;
@@ -84,10 +86,12 @@ import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
+import org.eclipse.swt.widgets.Widget;
 import org.eclipse.ui.IActionBars;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart;
@@ -96,6 +100,7 @@ import org.eclipse.ui.IPartListener2;
 import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.IViewSite;
+import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchCommandConstants;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchPart;
@@ -117,6 +122,7 @@ import org.eclipse.ui.part.ISetSelectionTarget;
 import org.eclipse.ui.part.MarkerTransfer;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.progress.IWorkbenchSiteProgressService;
+import org.eclipse.ui.services.IEvaluationService;
 import org.eclipse.ui.statushandlers.StatusManager;
 import org.eclipse.ui.views.WorkbenchViewerSetup;
 import org.eclipse.ui.views.markers.MarkerField;
@@ -167,6 +173,8 @@ public class ExtendedMarkersView extends ViewPart {
 	 */
 	private static final String TAG_SHOW_FILTER_TEXT = "showFilterText"; //$NON-NLS-1$
 
+	private static final String QUICK_FIX_PROPERTY = "org.eclipse.ui.ide.quickFix"; //$NON-NLS-1$
+
 	private static final MessageFormat SUMMARY_BREAKDOWN = new MessageFormat(
 			MarkerMessages.errorsAndWarningsSummaryBreakdown);
 
@@ -179,6 +187,12 @@ public class ExtendedMarkersView extends ViewPart {
 	private UIUpdateJob uiUpdateJob;
 
 	private MarkersTreeViewer viewer;
+
+	private final Set<IMarker> fixabilityUpdates = new HashSet<>();
+
+	private final Consumer<IMarker> fixabilityListener = this::markerFixabilityComputed;
+
+	private volatile Display fixabilityDisplay;
 
 	/**
 	 * Hosts {@link #viewer} and provides the search box used to filter the shown
@@ -493,6 +507,9 @@ public class ExtendedMarkersView extends ViewPart {
 
 		getSite().setSelectionProvider(viewer);
 
+		fixabilityDisplay = parent.getDisplay();
+		MarkerFixabilityCache.getInstance().addListener(fixabilityListener);
+
 		IUndoContext undoContext= getUndoContext();
 		undoAction= new UndoActionHandler(getSite(), undoContext);
 		undoAction.setActionDefinitionId(IWorkbenchCommandConstants.EDIT_UNDO);
@@ -638,8 +655,95 @@ public class ExtendedMarkersView extends ViewPart {
 		generator.disableAllFilters();
 	}
 
+	/**
+	 * Refreshes the labels of the items whose quick fix availability was computed
+	 * in the background and re-evaluates the quick fix enablement.
+	 */
+	private void markerFixabilityComputed(IMarker marker) {
+		boolean schedule;
+		synchronized (fixabilityUpdates) {
+			schedule = fixabilityUpdates.isEmpty();
+			fixabilityUpdates.add(marker);
+		}
+		if (!schedule) {
+			return;
+		}
+		Display display = fixabilityDisplay;
+		if (display == null || display.isDisposed() || isDisposed()) {
+			discardFixabilityUpdates();
+			return;
+		}
+		try {
+			display.asyncExec(() -> {
+				Set<IMarker> markers;
+				synchronized (fixabilityUpdates) {
+					markers = new HashSet<>(fixabilityUpdates);
+					fixabilityUpdates.clear();
+				}
+				if (!isDisposed()) {
+					updateFixableItems(markers);
+					if (affectsSelection(markers)) {
+						requestQuickFixEvaluation();
+					}
+				}
+			});
+		} catch (SWTException e) {
+			// display disposed in the meantime
+			discardFixabilityUpdates();
+		}
+	}
+
+	private void discardFixabilityUpdates() {
+		synchronized (fixabilityUpdates) {
+			fixabilityUpdates.clear();
+		}
+	}
+
+	/**
+	 * Updates all existing items of the markers, expanded or not, so that they
+	 * show the right image when they become visible. The elements already held by
+	 * the viewer are updated, so that their identity is kept.
+	 */
+	private void updateFixableItems(Set<IMarker> markers) {
+		Set<Object> elements = new LinkedHashSet<>();
+		for (IMarker marker : markers) {
+			for (Widget widget : viewer.testFindItems(new MarkerEntry(marker))) {
+				Object data = widget.getData();
+				if (data != null) {
+					elements.add(data);
+				}
+			}
+		}
+		if (!elements.isEmpty()) {
+			viewer.update(elements.toArray(), null);
+		}
+	}
+
+	private boolean affectsSelection(Set<IMarker> markers) {
+		for (Object selected : viewer.getStructuredSelection()) {
+			if (selected instanceof MarkerSupportItem item && item.getMarker() != null
+					&& markers.contains(item.getMarker())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private static void requestQuickFixEvaluation() {
+		IWorkbench workbench = PlatformUI.isWorkbenchRunning() ? PlatformUI.getWorkbench() : null;
+		if (workbench == null || workbench.isClosing()) {
+			return;
+		}
+		IEvaluationService service = workbench.getService(IEvaluationService.class);
+		if (service != null) {
+			service.requestEvaluation(QUICK_FIX_PROPERTY);
+		}
+	}
+
 	@Override
 	public void dispose() {
+		MarkerFixabilityCache.getInstance().removeListener(fixabilityListener);
+		discardFixabilityUpdates();
 		builder.cancelUpdate();
 		cancelQueuedUpdates();
 

@@ -22,12 +22,14 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.resources.IMarker;
-import org.eclipse.core.runtime.Adapters;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.dialogs.ProgressMonitorDialog;
 import org.eclipse.jface.operation.IRunnableContext;
@@ -45,7 +47,6 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.internal.IWorkbenchHelpContextIds;
 import org.eclipse.ui.internal.ide.StatusUtil;
-import org.eclipse.ui.progress.IWorkbenchSiteProgressService;
 import org.eclipse.ui.statushandlers.StatusManager;
 import org.eclipse.ui.views.markers.MarkerViewHandler;
 import org.eclipse.ui.views.markers.WorkbenchMarkerResolution;
@@ -80,7 +81,7 @@ public class QuickFixHandler extends MarkerViewHandler {
 		final IMarker[] selectedMarkers = view.getSelectedMarkers();
 		final IMarker firstSelectedMarker = selectedMarkers[0];
 
-		IRunnableWithProgress resolutionsRunnable = monitor -> {
+		IRunnableWithProgress computation = monitor -> {
 			monitor.beginTask(MarkerMessages.resolveMarkerAction_computationManyAction, 100);
 
 			IMarker[] allMarkers = view.getAllMarkers();
@@ -110,17 +111,38 @@ public class QuickFixHandler extends MarkerViewHandler {
 			monitor.done();
 		};
 
-		IWorkbenchSiteProgressService service = Adapters.adapt(view.getSite(), IWorkbenchSiteProgressService.class);
-
+		// The generators may wait for locks. They run in a separate thread so that
+		// neither the UI thread nor the dialog is stuck when the user cancels.
+		IRunnableWithProgress resolutionsRunnable = monitor -> {
+			FutureTask<Void> task = new FutureTask<>(() -> {
+				computation.run(monitor);
+				return null;
+			});
+			Thread worker = new Thread(task, "Computing quick fix resolutions"); //$NON-NLS-1$
+			worker.setDaemon(true);
+			worker.start();
+			while (true) {
+				try {
+					task.get(100, TimeUnit.MILLISECONDS);
+					return;
+				} catch (TimeoutException e) {
+					if (monitor.isCanceled()) {
+						// abandon the result
+						throw new InterruptedException();
+					}
+				} catch (java.util.concurrent.ExecutionException e) {
+					throw new InvocationTargetException(e.getCause());
+				}
+			}
+		};
 		IRunnableContext context = new ProgressMonitorDialog(view.getSite().getShell());
 
 		try {
-			if (service == null) {
-				PlatformUI.getWorkbench().getProgressService().runInUI(context, resolutionsRunnable, null);
-			} else {
-				service.runInUI(context, resolutionsRunnable, null);
-			}
-		} catch (InvocationTargetException | InterruptedException exception) {
+			context.run(true, true, resolutionsRunnable);
+		} catch (InterruptedException exception) {
+			// canceled by the user
+			return null;
+		} catch (InvocationTargetException exception) {
 			throw new ExecutionException(exception.getLocalizedMessage(), exception);
 		}
 
